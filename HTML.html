@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vertical Speed Indicator — Simülatör</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#07090c;color:#c8d8e8;font-family:'Courier New',Courier,monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;}
+
+.hdr{width:100%;background:#0d1318;border-bottom:1px solid #1e2a34;padding:10px 22px;display:flex;align-items:center;gap:12px;}
+.hdr-dot{width:8px;height:8px;border-radius:50%;background:#22cc44;animation:blink 2s ease-in-out infinite;flex-shrink:0;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+.hdr-title{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:#3a7a9a;}
+.hdr-ver{margin-left:auto;font-size:10px;color:#253545;letter-spacing:2px;}
+
+.main{display:flex;gap:14px;padding:14px;width:100%;max-width:1060px;}
+
+.gauge-wrap{background:#0d1318;border:1px solid #1e2a34;border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:10px;flex-shrink:0;}
+
+.readout-primary{font-size:26px;font-weight:bold;color:#00ddff;letter-spacing:2px;text-align:center;background:#040a0e;border:1px solid #1e2a34;border-radius:4px;padding:7px 16px;min-width:240px;font-variant-numeric:tabular-nums;}
+.readout-sub{font-size:12px;color:#3a6a7a;text-align:center;}
+
+.ctrls{flex:1;display:flex;flex-direction:column;gap:9px;min-width:270px;}
+.panel{background:#0d1318;border:1px solid #1e2a34;border-radius:6px;overflow:hidden;}
+.ph{background:#131c24;border-bottom:1px solid #1e2a34;padding:5px 12px;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#2a5a6a;}
+.pb{padding:11px 13px;}
+
+label{font-size:11px;color:#5a7a8a;}
+
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:#1a2a3a;border-radius:2px;outline:none;cursor:pointer;margin:7px 0;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:#cc3333;border-radius:50%;border:2px solid #ff5555;cursor:pointer;}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;background:#cc3333;border-radius:50%;border:2px solid #ff5555;cursor:pointer;}
+.tick-row{display:flex;justify-content:space-between;font-size:9px;color:#2a4a5a;margin-bottom:2px;}
+
+.row{display:flex;align-items:center;gap:7px;margin-top:8px;}
+input[type=number]{background:#040a0e;color:#00ff55;border:1px solid #1e2a34;border-radius:4px;padding:5px 8px;width:86px;font-family:'Courier New',monospace;font-size:13px;outline:none;}
+input[type=number]:focus{border-color:#1a5a8a;}
+
+.btn{background:#0a1015;color:#c8d8e8;border:1px solid #1e2a34;border-radius:4px;padding:7px 12px;font-family:'Courier New',monospace;font-size:10px;cursor:pointer;letter-spacing:1px;transition:background .15s,border-color .15s;width:100%;margin-top:6px;display:block;text-align:center;}
+.btn:hover{background:#141c26;border-color:#2a4a5a;}
+.btn.g{background:#091509;border-color:#1a5a1a;color:#22cc44;}
+.btn.danger{border-color:#3a1515;color:#ff4444;}
+.btn.danger.act{background:#1a0606;border-color:#661111;color:#ff6060;}
+
+.unit-row{display:flex;gap:16px;margin-top:7px;}
+.unit-row label{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#c8d8e8;}
+input[type=radio]{accent-color:#ff4444;cursor:pointer;}
+.conv{margin-top:7px;font-size:12px;color:#00ddff;}
+
+.alarm-box{padding:9px 14px;border-radius:4px;font-size:12px;font-weight:bold;text-align:center;letter-spacing:.5px;transition:all .2s;}
+.al-n{background:#051005;color:#22cc44;border:1px solid #0a2a0a;}
+.al-w{background:#130e00;color:#ff8800;border:1px solid #291d00;}
+.al-c{background:#130000;color:#ff2222;border:1px solid #390000;animation:aflash .5s infinite;}
+.al-f{background:#1a0000;color:#ff0000;border:1px solid #550000;}
+@keyframes aflash{0%,100%{opacity:1;}50%{opacity:.45;}}
+
+.prog-bar{width:100%;height:3px;background:#1a2a3a;border-radius:2px;margin-top:8px;overflow:hidden;}
+.prog-fill{height:100%;background:#22cc44;border-radius:2px;width:0%;transition:width .1s linear;}
+.scen-lbl{font-size:10px;color:#2a4a5a;text-align:center;margin-top:4px;min-height:15px;}
+.fail-lbl{font-size:11px;text-align:center;margin-top:6px;color:#22cc44;}
+
+.kbd-row{display:flex;flex-wrap:wrap;gap:5px;}
+.kbd{background:#131c24;border:1px solid #1e2e3e;border-radius:3px;padding:2px 6px;font-size:9px;color:#5a8aaa;}
+
+.log-wrap{width:100%;max-width:1060px;padding:0 14px 14px;}
+.log-outer{background:#030507;border:1px solid #1e2a34;border-radius:6px;overflow:hidden;}
+.log-hdr{background:#131c24;border-bottom:1px solid #1e2a34;padding:5px 12px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#2a5a6a;display:flex;justify-content:space-between;align-items:center;}
+.log-hdr .btn{width:auto;margin-top:0;padding:2px 10px;font-size:9px;}
+#logBox{height:110px;overflow-y:auto;padding:6px 12px;font-size:11px;line-height:1.7;}
+.lo{color:#2a5a2a;} .lw{color:#6a5010;} .lc{color:#7a2020;} .lf{color:#aa1010;}
+
+@media(max-width:720px){.main{flex-direction:column;}}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-dot"></div>
+  <span class="hdr-title">Vertical Speed Indicator — Simülatör</span>
+  <span class="hdr-ver">FLT-SIM v2.0</span>
+</div>
+
+<div class="main">
+  <div class="gauge-wrap">
+    <canvas id="vsi" width="460" height="460"></canvas>
+    <div class="readout-primary" id="rPrimary">+0 ft/min</div>
+    <div class="readout-sub" id="rSub">0.000 m/s</div>
+  </div>
+
+  <div class="ctrls">
+    <div class="panel">
+      <div class="ph">Değer Girişi</div>
+      <div class="pb">
+        <label>Dikey Hız (ft/min):</label>
+        <input type="range" id="slider" min="-6000" max="6000" value="0" step="50">
+        <div class="tick-row"><span>-6000</span><span>-3000</span><span>0</span><span>3000</span><span>6000</span></div>
+        <div class="row">
+          <label>Manuel:</label>
+          <input type="number" id="manualInput" value="0" min="-6000" max="6000" step="50">
+          <span style="font-size:11px;color:#2a4a5a">ft/min</span>
+          <button class="btn" style="width:auto;margin-top:0;padding:5px 10px" onclick="applyManual()">Uygula</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Birim Dönüşümü</div>
+      <div class="pb">
+        <div class="unit-row">
+          <label><input type="radio" name="unit" id="uFpm" value="fpm" checked> ft/min</label>
+          <label><input type="radio" name="unit" id="uMs"  value="ms"> m/s</label>
+        </div>
+        <div class="conv" id="convVal">0.000 m/s &harr; 0 ft/min</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Alarm Durumu</div>
+      <div class="pb">
+        <div class="alarm-box al-n" id="alarmBox">● NORMAL</div>
+        <button class="btn" id="muteBtn" onclick="toggleMute()">🔇 Sesi Kapat</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Senaryo</div>
+      <div class="pb">
+        <button class="btn" id="scenBtn" onclick="toggleScenario()">▶ Uçuş Senaryosu Başlat</button>
+        <div class="prog-bar"><div class="prog-fill" id="scenProg"></div></div>
+        <div class="scen-lbl" id="scenLbl">Hazır</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Arıza Simülasyonu</div>
+      <div class="pb">
+        <button class="btn danger" id="failBtn" onclick="toggleFailure()">⚠ Enstrüman Arızası</button>
+        <div class="fail-lbl" id="failLbl">Enstrüman normal</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Log / Dışa Aktarım</div>
+      <div class="pb" style="display:flex;gap:8px;">
+        <button class="btn" style="margin-top:0" onclick="clearLog()">Logu Temizle</button>
+        <button class="btn" style="margin-top:0" onclick="downloadLog()">CSV İndir</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="ph">Klavye Kısayolları</div>
+      <div class="pb">
+        <div class="kbd-row">
+          <span class="kbd">↑↓ ±100</span>
+          <span class="kbd">PgUp/Dn ±500</span>
+          <span class="kbd">Home → 0</span>
+          <span class="kbd">F5 Senaryo</span>
+          <span class="kbd">F9 Arıza</span>
+          <span class="kbd">M Ses</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="log-wrap">
+  <div class="log-outer">
+    <div class="log-hdr">
+      <span>Uçuş Log'u</span>
+    </div>
+    <div id="logBox"></div>
+  </div>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────
+const W=460,H=460,CX=230,CY=240,R=183;
+const VSI_MAX=6000, ALARM_FPM=2500, CRITICAL_FPM=4000;
+
+const SCENARIO=[
+  [   0, 3,'Yerde bekleme'],
+  [ 500, 4,'Kalkış başlangıcı'],
+  [2000, 5,'Tırmanış'],
+  [3500, 6,'Hızlı tırmanış'],
+  [1200,10,'Normal tırmanış'],
+  [   0, 5,'Seyrüsefer'],
+  [-800, 8,'Alçalış başlangıcı'],
+  [-2500,6,'Hızlı alçalış'],
+  [-1000,8,'Yaklaşma'],
+  [-500, 5,'Son yaklaşma'],
+  [   0, 3,'İniş'],
+];
+
+// ── State ──────────────────────────────────────────
+let targetFpm=0, displayFpm=0;
+let failed=false, alarmMuted=false;
+let scenarioRunning=false, scenTimers=[];
+let lastBeep=0, logTick=0;
+const logEntries=[];
+
+// ── Canvas ─────────────────────────────────────────
+const canvas=document.getElementById('vsi');
+const ctx=canvas.getContext('2d');
+const faceCanvas=document.createElement('canvas');
+faceCanvas.width=W; faceCanvas.height=H;
+const fc=faceCanvas.getContext('2d');
+
+// ── Math ───────────────────────────────────────────
+const fpmToMs=f=>f*0.00508;
+
+function fpmToAngle(fpm){
+  const ratio=Math.max(-1,Math.min(1,fpm/VSI_MAX));
+  return(270-ratio*135)*Math.PI/180;
+}
+
+function polar(a,r){
+  return[CX+r*Math.cos(a), CY+r*Math.sin(a)];
+}
+
+// ── Face drawing ───────────────────────────────────
+function arcBand(c,color,offA,offB,r,lw){
+  // offA,offB in degrees where 0=top(9-o'clock base), ±135=extremes
+  // Convert offset degrees → fpm → angle
+  const a1=fpmToAngle(offA/135*VSI_MAX);
+  const a2=fpmToAngle(offB/135*VSI_MAX);
+  c.beginPath();
+  c.arc(CX,CY,r,a1,a2,true); // anticlockwise = decreasing angle = toward 0
+  c.strokeStyle=color; c.lineWidth=lw; c.stroke();
+}
+
+function buildFace(){
+  const c=fc;
+  c.clearRect(0,0,W,H);
+
+  // Outer chrome bezel
+  c.beginPath(); c.arc(CX,CY,208,0,Math.PI*2);
+  c.fillStyle='#303030'; c.fill();
+  c.strokeStyle='#484848'; c.lineWidth=2; c.stroke();
+
+  c.beginPath(); c.arc(CX,CY,199,0,Math.PI*2);
+  c.fillStyle='#161616'; c.fill();
+
+  // Face plate
+  c.beginPath(); c.arc(CX,CY,191,0,Math.PI*2);
+  c.fillStyle='#111418'; c.fill();
+  c.strokeStyle='#1a1a1a'; c.lineWidth=1; c.stroke();
+
+  // Colored arc bands (background lighting zones)
+  arcBand(c,'#1a3d1a', -22.5,  22.5, 162, 15); // green  ≈ ±1000
+  arcBand(c,'#2c2900',  22.5,  67.5, 162, 15); // amber  pos
+  arcBand(c,'#2c2900', -67.5, -22.5, 162, 15); // amber  neg
+  arcBand(c,'#3d1700',  67.5,  135,  162, 15); // red    pos
+  arcBand(c,'#3d1700',-135,   -67.5, 162, 15); // red    neg
+
+  // Tick marks
+  const ticks=[
+    [6000,true,'6'],[5000,false,''],[4000,true,'4'],[3000,false,''],
+    [2000,true,'2'],[1000,false,''],[0,true,'0'],
+    [-1000,false,''],[-2000,true,'2'],[-3000,false,''],
+    [-4000,true,'4'],[-5000,false,''],[-6000,true,'6'],
+  ];
+
+  ticks.forEach(([fpm,major,lbl])=>{
+    const ang=fpmToAngle(fpm);
+    const [x1,y1]=polar(ang, major?154:148);
+    const [x2,y2]=polar(ang, major?134:141);
+    c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2);
+    c.strokeStyle='#d4d4d4'; c.lineWidth=major?2.5:1.5; c.stroke();
+    if(lbl){
+      const [tx,ty]=polar(ang,115);
+      c.fillStyle='#c8d8e8';
+      c.font='bold 15px Courier New';
+      c.textAlign='center'; c.textBaseline='middle';
+      c.fillText(lbl,tx,ty);
+    }
+  });
+
+  // Minor tick subdivisions (500 fpm steps)
+  [-5500,-4500,-3500,-2500,-1500,-500,500,1500,2500,3500,4500,5500].forEach(fpm=>{
+    const ang=fpmToAngle(fpm);
+    const [x1,y1]=polar(ang,148);
+    const [x2,y2]=polar(ang,141);
+    c.beginPath(); c.moveTo(x1,y1); c.lineTo(x2,y2);
+    c.strokeStyle='#6a6a6a'; c.lineWidth=1; c.stroke();
+  });
+
+  // Direction labels
+  c.fillStyle='#3a7a9a'; c.font='bold 9px Courier New';
+  c.textAlign='center'; c.textBaseline='middle';
+  c.fillText('UP',CX,CY-136);
+  c.fillText('DN',CX,CY+136);
+
+  // Instrument name plate
+  c.fillStyle='#244455'; c.font='bold 11px Courier New';
+  c.fillText('VERTICAL SPEED',CX,CY+72);
+  c.fillStyle='#152a33'; c.font='7px Courier New';
+  c.fillText('HUNDREDS OF FEET PER MINUTE',CX,CY+85);
+
+  // Center hub
+  c.beginPath(); c.arc(CX,CY,9,0,Math.PI*2);
+  c.fillStyle='#2a2a2a'; c.fill();
+  c.strokeStyle='#484848'; c.lineWidth=1.5; c.stroke();
+}
+
+// ── Needle & overlays ──────────────────────────────
+function drawNeedle(fpm){
+  const ang=fpmToAngle(fpm);
+  const [tx,ty]=polar(ang,150);
+  const [bx,by]=polar(ang+Math.PI,40);
+
+  // Drop shadow
+  ctx.beginPath(); ctx.moveTo(bx+2,by+2); ctx.lineTo(tx+2,ty+2);
+  ctx.strokeStyle='rgba(50,0,0,.65)'; ctx.lineWidth=9; ctx.lineCap='round'; ctx.stroke();
+
+  // Body
+  ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(tx,ty);
+  ctx.strokeStyle='#ff4040'; ctx.lineWidth=4.5; ctx.lineCap='round'; ctx.stroke();
+
+  // Arrowhead
+  const [ax1,ay1]=polar(ang+0.13,136);
+  const [ax2,ay2]=polar(ang-0.13,136);
+  ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(ax1,ay1); ctx.lineTo(ax2,ay2);
+  ctx.closePath(); ctx.fillStyle='#ff4040'; ctx.fill();
+
+  // Center pin
+  ctx.beginPath(); ctx.arc(CX,CY,7,0,Math.PI*2);
+  ctx.fillStyle='#3a3a3a'; ctx.fill();
+  ctx.strokeStyle='#666'; ctx.lineWidth=1.5; ctx.stroke();
+}
+
+function drawFail(){
+  ctx.strokeStyle='#cc0000'; ctx.lineWidth=6; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(CX-70,CY-70); ctx.lineTo(CX+70,CY+70); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(CX+70,CY-70); ctx.lineTo(CX-70,CY+70); ctx.stroke();
+
+  ctx.strokeStyle='#aa0000'; ctx.lineWidth=2.5;
+  ctx.setLineDash([8,5]);
+  ctx.strokeRect(CX-88,CY-88,176,176);
+  ctx.setLineDash([]);
+
+  ctx.fillStyle='#ff1111'; ctx.font='bold 24px Courier New';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('FAIL',CX,CY+105);
+  ctx.fillStyle='#661111'; ctx.font='10px Courier New';
+  ctx.fillText('INSTRUMENT FAILURE',CX,CY+122);
+}
+
+// ── Animation loop ─────────────────────────────────
+function animate(){
+  if(!failed){
+    const d=targetFpm-displayFpm;
+    displayFpm+=d*0.08;
+    if(Math.abs(d)<0.5) displayFpm=targetFpm;
+  }
+  ctx.clearRect(0,0,W,H);
+  ctx.drawImage(faceCanvas,0,0);
+  failed ? drawFail() : drawNeedle(displayFpm);
+  updateDisplays();
+  logTick++;
+  if(logTick%40===0) doLog();
+  setTimeout(animate,50);
+}
+
+// ── Display update ─────────────────────────────────
+function updateDisplays(){
+  const fpm=displayFpm, ms=fpmToMs(fpm);
+  const useMs=document.getElementById('uMs').checked;
+  const sign=v=>(v>=0?'+':'');
+
+  document.getElementById('rPrimary').textContent=
+    useMs ? sign(ms)+ms.toFixed(2)+' m/s'
+          : sign(fpm)+Math.round(fpm)+' ft/min';
+  document.getElementById('rSub').textContent=
+    useMs ? Math.round(fpm)+' ft/min'
+          : ms.toFixed(3)+' m/s';
+  document.getElementById('convVal').textContent=
+    ms.toFixed(3)+' m/s \u2194 '+Math.round(fpm)+' ft/min';
+
+  const ab=document.getElementById('alarmBox');
+  const af=Math.abs(fpm);
+  if(failed){
+    ab.className='alarm-box al-f'; ab.textContent='⚠ ENSTRÜMAN ARIZALI';
+  } else if(af>=CRITICAL_FPM){
+    ab.className='alarm-box al-c'; ab.textContent='🔴 KRİTİK ALARM!';
+    playBeep(880,0.35);
+  } else if(af>=ALARM_FPM){
+    ab.className='alarm-box al-w'; ab.textContent='🟡 UYARI';
+  } else {
+    ab.className='alarm-box al-n'; ab.textContent='● NORMAL';
+  }
+}
+
+function playBeep(freq,vol){
+  if(alarmMuted) return;
+  const now=Date.now(); if(now-lastBeep<1100) return; lastBeep=now;
+  try{
+    const ac=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=ac.createOscillator(); const g=ac.createGain();
+    osc.connect(g); g.connect(ac.destination);
+    osc.frequency.value=freq; osc.type='sine';
+    g.gain.setValueAtTime(vol,ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.35);
+    osc.start(ac.currentTime); osc.stop(ac.currentTime+.35);
+  }catch(e){}
+}
+
+// ── Controls ───────────────────────────────────────
+document.getElementById('slider').addEventListener('input',e=>{
+  const v=parseFloat(e.target.value);
+  targetFpm=v;
+  document.getElementById('manualInput').value=Math.round(v);
+});
+
+function setTarget(v){
+  v=Math.max(-6000,Math.min(6000,v));
+  targetFpm=v;
+  document.getElementById('slider').value=v;
+  document.getElementById('manualInput').value=Math.round(v);
+}
+
+function applyManual(){
+  const v=parseFloat(document.getElementById('manualInput').value)||0;
+  setTarget(v);
+}
+document.getElementById('manualInput').addEventListener('keydown',e=>{if(e.key==='Enter')applyManual();});
+
+function toggleMute(){
+  alarmMuted=!alarmMuted;
+  const b=document.getElementById('muteBtn');
+  b.textContent=alarmMuted?'🔔 Sesi Aç':'🔇 Sesi Kapat';
+  b.style.color=alarmMuted?'#ff8800':'';
+}
+
+// ── Scenario ───────────────────────────────────────
+function toggleScenario(){ scenarioRunning ? stopScenario() : startScenario(); }
+
+function stopScenario(){
+  scenarioRunning=false;
+  scenTimers.forEach(clearTimeout); scenTimers=[];
+  const b=document.getElementById('scenBtn');
+  b.textContent='▶ Uçuş Senaryosu Başlat'; b.classList.remove('g');
+  const lbl=document.getElementById('scenLbl');
+  lbl.textContent='Durduruldu'; lbl.style.color='#ff8800';
+}
+
+function startScenario(){
+  scenarioRunning=true;
+  const b=document.getElementById('scenBtn');
+  b.textContent='⏹ Senaryoyu Durdur'; b.classList.add('g');
+  const totalTime=SCENARIO.reduce((a,s)=>a+s[1],0);
+  const startTs=Date.now();
+  let t=0;
+
+  // Progress updater
+  function progUpdate(){
+    if(!scenarioRunning) return;
+    const elapsed=(Date.now()-startTs)/1000;
+    document.getElementById('scenProg').style.width=
+      Math.min(100,elapsed/totalTime*100)+'%';
+    if(elapsed<totalTime) scenTimers.push(setTimeout(progUpdate,100));
+  }
+  progUpdate();
+
+  SCENARIO.forEach(([fpm,dur,lbl],i)=>{
+    const id=setTimeout(()=>{
+      if(!scenarioRunning) return;
+      setTarget(fpm);
+      const sl=document.getElementById('scenLbl');
+      sl.textContent=lbl+' ('+(i+1)+'/'+SCENARIO.length+')';
+      sl.style.color='#22cc44';
+    },t*1000);
+    scenTimers.push(id); t+=dur;
+  });
+
+  const endId=setTimeout(()=>{
+    if(!scenarioRunning) return;
+    setTarget(0);
+    scenarioRunning=false;
+    document.getElementById('scenLbl').textContent='Senaryo tamamlandı ✓';
+    document.getElementById('scenProg').style.width='100%';
+    b.textContent='▶ Uçuş Senaryosu Başlat'; b.classList.remove('g');
+  },t*1000);
+  scenTimers.push(endId);
+}
+
+// ── Failure ────────────────────────────────────────
+function toggleFailure(){
+  failed=!failed;
+  const b=document.getElementById('failBtn'), l=document.getElementById('failLbl');
+  if(failed){
+    b.textContent='✔ Arızayı Gider'; b.classList.add('act');
+    l.textContent='⚠ ENSTRÜMAN ARIZALI!'; l.style.color='#ff2222';
+  } else {
+    b.textContent='⚠ Enstrüman Arızası'; b.classList.remove('act');
+    l.textContent='Enstrüman normal'; l.style.color='#22cc44';
+  }
+}
+
+// ── Log ────────────────────────────────────────────
+function doLog(){
+  const fpm=displayFpm, ms=fpmToMs(fpm), af=Math.abs(fpm);
+  let lvl='ok';
+  if(failed) lvl='fail';
+  else if(af>=CRITICAL_FPM) lvl='crit';
+  else if(af>=ALARM_FPM) lvl='warn';
+  const useMs=document.getElementById('uMs').checked;
+  const ts=new Date().toTimeString().slice(0,8);
+  const fs=fpm>=0?'+':'', ms2=ms>=0?'+':'';
+  const entry={ts,fpm:fpm.toFixed(1),ms:ms.toFixed(3),unit:useMs?'m/s':'ft/min',alarm:lvl,failed:failed?1:0};
+  logEntries.push(entry);
+
+  const box=document.getElementById('logBox');
+  const d=document.createElement('div');
+  d.className='l'+lvl[0];
+  d.textContent=`[${ts}]  ${fs}${Math.round(fpm).toString().padStart(6,' ')} ft/min  |  ${ms2}${ms.toFixed(3).padStart(8,' ')} m/s  |  ${lvl.toUpperCase()}`;
+  box.appendChild(d);
+  box.scrollTop=box.scrollHeight;
+  while(box.children.length>120) box.removeChild(box.firstChild);
+}
+
+function clearLog(){ document.getElementById('logBox').innerHTML=''; logEntries.length=0; }
+
+function downloadLog(){
+  const header='timestamp,fpm,ms,unit,alarm,failed\n';
+  const rows=logEntries.map(e=>`${e.ts},${e.fpm},${e.ms},${e.unit},${e.alarm},${e.failed}`).join('\n');
+  const blob=new Blob([header+rows],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='vsi_log_'+new Date().toISOString().slice(0,19).replace(/[T:]/g,'-')+'.csv';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ── Keyboard ───────────────────────────────────────
+document.addEventListener('keydown',e=>{
+  switch(e.key){
+    case 'ArrowUp':   e.preventDefault(); setTarget(targetFpm+100); break;
+    case 'ArrowDown': e.preventDefault(); setTarget(targetFpm-100); break;
+    case 'PageUp':    e.preventDefault(); setTarget(targetFpm+500); break;
+    case 'PageDown':  e.preventDefault(); setTarget(targetFpm-500); break;
+    case 'Home':      e.preventDefault(); setTarget(0);              break;
+    case 'F5':        e.preventDefault(); toggleScenario();          break;
+    case 'F9':        e.preventDefault(); toggleFailure();           break;
+    case 'm': case 'M': toggleMute(); break;
+  }
+});
+
+// ── Init ───────────────────────────────────────────
+buildFace();
+animate();
+</script>
+</body>
+</html>
